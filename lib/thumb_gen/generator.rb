@@ -38,22 +38,25 @@ module ThumbGen
     # Adds text overlays to the image based on provided text configurations.
     def add_texts
       texts.each do |text|
-        draw_text(
-          background,
-          text[:text],
-          wrapped_width: wrapped_width(text[:wrapped_width]),
-          font: font(text[:style]),
-          font_size: text[:font_size] || 64,
-          font_weight: font_weight(text[:style]),
-          font_style: font_style(text[:style]),
-          color: text[:color] || '#000000',
-          outline_color: text[:outline_color],
-          outline_width: text[:outline_width] || 0,
-          gravity: gravity(text[:gravity]),
-          position_x: text[:position_x] || 0,
-          position_y: text[:position_y] || 0
-        )
+        draw_text(background, text[:text], **text_options(text))
       end
+    end
+
+    def text_options(text)
+      font_family = text[:font] || 'PUblisSans-Regular'
+      {
+        wrapped_width: wrapped_width(text[:wrapped_width]),
+        font: font(font_family),
+        font_size: text[:font_size] || 64,
+        font_weight: font_weight(font_family),
+        font_style: font_style(font_family),
+        color: text[:color] || '#000000',
+        outline_color: text[:outline_color],
+        outline_width: text[:outline_width] || 0,
+        gravity: gravity(text[:gravity]),
+        position_x: text[:position_x] || 0,
+        position_y: text[:position_y] || 0
+      }
     end
 
     # Determines the width within which text should be wrapped.
@@ -62,28 +65,26 @@ module ThumbGen
     end
 
     # Determines the font based on the style.
-    def font(style)
-      case style
-      when 'bold' then 'Arial-Bold'
-      when 'italic' then 'Arial-Italic'
-      when 'bold-and-italic' then 'Arial-Bold-Italic'
-      else 'Arial'
+    def font(font_family)
+      base = File.expand_path('../../fonts', __dir__)
+      File.join(base, "#{font_family}.ttf")
+    end
+
+    # Determines the font weight based on the name.
+    def font_weight(font_family)
+      if font_family.downcase.include?('bold')
+        Magick::BolderWeight
+      else
+        Magick::NormalWeight
       end
     end
 
-    # Determines the font weight based on the style.
-    def font_weight(style)
-      case style
-      when 'bold', 'bold-and-italic' then Magick::BolderWeight
-      else Magick::NormalWeight
-      end
-    end
-
-    # Determines the font style based on the style.
-    def font_style(style)
-      case style
-      when 'italic', 'bold-and-italic' then Magick::ItalicStyle
-      else Magick::NormalStyle
+    # Determines the font style based on the name.
+    def font_style(font_family)
+      if font_family.downcase.include?('italic')
+        Magick::ItalicStyle
+      else
+        Magick::NormalStyle
       end
     end
 
