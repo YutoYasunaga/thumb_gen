@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    thumb_gen (0.1.0)
+    thumb_gen (0.1.1)
       rmagick (~> 6.0.0)
 
 GEM
