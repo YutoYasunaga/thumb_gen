@@ -22,12 +22,10 @@ module ThumbGen
 
     private
 
-    # Retrieves and caches the background image.
     def background
       @background ||= Magick::Image.read(background_url).first
     end
 
-    # Handles the resizing, formatting, and text addition for the image.
     def generate_image
       background.resize_to_fill!(options[:width], options[:height])
       background.format = options[:format]
@@ -35,15 +33,80 @@ module ThumbGen
       background.write(output_path)
     end
 
-    # Adds text overlays to the image based on provided text configurations.
     def add_texts
-      texts.each do |text|
+      auto_texts, normal_texts = texts.partition { |t| t[:gravity].to_s == 'auto' }
+
+      draw_auto_centered_texts(auto_texts) unless auto_texts.empty?
+
+      normal_texts.each do |text|
         draw_text(background, text[:text], **text_options(text))
       end
     end
 
+    def draw_auto_centered_texts(text_items)
+      metrics_list = []
+
+      text_items.each do |text|
+        opts = text_options(text)
+        draw = Magick::Draw.new
+        draw.font = opts[:font]
+        draw.pointsize = opts[:font_size]
+        draw.font_weight = opts[:font_weight]
+        draw.font_style = opts[:font_style]
+
+        wrapped_text = wrap_text(text[:text], opts[:wrapped_width] || background.columns, opts)
+        lines = wrapped_text.split("\n")
+        line_metrics = lines.map { |line| draw.get_type_metrics(background, line) }
+        metrics_list << [lines, opts, line_metrics]
+      end
+
+      total_height = metrics_list.sum { |_, _, ms| ms.sum(&:height) }
+      y_start = (background.rows - total_height) / 2.0
+
+      y = y_start
+      metrics_list.each do |lines, opts, metrics|
+        lines.zip(metrics).each do |line, metric|
+          draw = Magick::Draw.new
+          draw.font = opts[:font]
+          draw.pointsize = opts[:font_size]
+          draw.fill = opts[:color]
+          draw.font_weight = opts[:font_weight]
+          draw.font_style = opts[:font_style]
+
+          x = (background.columns - metric.width) / 2.0
+          draw.annotate(background, 0, 0, x, y + metric.ascent, line)
+          y += metric.height
+        end
+      end
+    end
+
+    def wrap_text(text, max_width, opts)
+      words = text.split(/\s+/)
+      lines = []
+      line = ''
+      draw = Magick::Draw.new
+      draw.font = opts[:font]
+      draw.pointsize = opts[:font_size]
+      draw.font_weight = opts[:font_weight]
+      draw.font_style = opts[:font_style]
+
+      words.each do |word|
+        test_line = line.empty? ? word : "#{line} #{word}"
+        width = draw.get_type_metrics(background, test_line).width
+        if width <= max_width
+          line = test_line
+        else
+          lines << line unless line.empty?
+          line = word
+        end
+      end
+
+      lines << line unless line.empty?
+      lines.join("\n")
+    end
+
     def text_options(text)
-      font_family = text[:font] || 'PUblisSans-Regular'
+      font_family = text[:font] || 'PublicSans-Regular'
       {
         wrapped_width: wrapped_width(text[:wrapped_width]),
         font: font(font_family),
@@ -59,38 +122,27 @@ module ThumbGen
       }
     end
 
-    # Determines the width within which text should be wrapped.
     def wrapped_width(width)
       width || background.columns
     end
 
-    # Determines the font based on the style.
     def font(font_family)
       base = File.expand_path('../../fonts', __dir__)
       File.join(base, "#{font_family}.ttf")
     end
 
-    # Determines the font weight based on the name.
     def font_weight(font_family)
-      if font_family.downcase.include?('bold')
-        Magick::BolderWeight
-      else
-        Magick::NormalWeight
-      end
+      font_family.downcase.include?('bold') ? Magick::BolderWeight : Magick::NormalWeight
     end
 
-    # Determines the font style based on the name.
     def font_style(font_family)
-      if font_family.downcase.include?('italic')
-        Magick::ItalicStyle
-      else
-        Magick::NormalStyle
-      end
+      font_family.downcase.include?('italic') ? Magick::ItalicStyle : Magick::NormalStyle
     end
 
-    # Converts a string description to a Magick gravity constant using a hash map.
     def gravity(str)
-      gravity_map = {
+      return nil if str.to_s == 'auto'
+
+      {
         'northwest' => Magick::NorthWestGravity,
         'north' => Magick::NorthGravity,
         'northeast' => Magick::NorthEastGravity,
@@ -100,10 +152,7 @@ module ThumbGen
         'south' => Magick::SouthGravity,
         'southeast' => Magick::SouthEastGravity,
         'center' => Magick::CenterGravity
-      }
-
-      # Return the corresponding gravity value or default to CenterGravity if not found
-      gravity_map[str] || Magick::CenterGravity
+      }[str] || Magick::CenterGravity
     end
   end
 end
