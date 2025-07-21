@@ -86,9 +86,6 @@ ThumbGen.generate(output_path, background_url, texts, options)
 > Font files like `Roboto-BoldItalic.ttf` are bundled in the gem’s `fonts/` folder.  
 Use only the filename **without extension** as the `font:` value.
 
-- NotoSansJP-Regular
-- NotoSansJP-Bold
-- NotoSansJP-Thin
 - PublicSans-Regular
 - PublicSans-Bold
 - PublicSans-BoldItalic
@@ -100,6 +97,18 @@ Use only the filename **without extension** as the `font:` value.
 - Roboto-Italic
 - Roboto-Thin
 - Roboto-ThinItalic
+- For Japanese:
+  - NotoSansJP-Regular
+  - NotoSansJP-Bold
+  - NotoSansJP-Thin
+- For Korean:
+  - NotoSansKR-Regular
+  - NotoSansKR-Bold
+  - NotoSansKR-Thin
+- For Simplified Chinese
+  - NotoSansSC-Regular
+  - NotoSansSC-Bold
+  - NotoSansSC-Thin
 
 ---
 

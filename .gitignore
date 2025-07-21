@@ -10,6 +10,4 @@
 # rspec failure tracking
 .rspec_status
 
-.idea
 thumb_gen-*.gem
-/lib/thumb_gen/test.rb
