@@ -87,27 +87,8 @@ module ThumbGen
       draw.font_weight = opts[:font_weight]
       draw.font_style = opts[:font_style]
 
-      if text.include?(' ')
-        # 📝 For languages with spaces (e.g. English) → wrap by words
-        words = text.split(/\s+/)
-        lines = []
-        line = ''
-
-        words.each do |word|
-          test_line = line.empty? ? word : "#{line} #{word}"
-          width = draw.get_type_metrics(background, test_line).width
-          if width <= max_width
-            line = test_line
-          else
-            lines << line unless line.empty?
-            line = word
-          end
-        end
-
-        lines << line unless line.empty?
-        lines.join("\n")
-      else
-        # 🇯🇵 For languages without spaces (e.g. Japanese, Chinese) → wrap by character
+      if contains_cjk?(text)
+        # 🇯🇵 CJK text → wrap by character
         chars = text.scan(/.{1}/m)
         lines = []
         line = ''
@@ -125,7 +106,31 @@ module ThumbGen
 
         lines << line unless line.empty?
         lines.join("\n")
+      else
+        # 🌍 Non-CJK text → wrap by word
+        words = text.split(/\s+/)
+        lines = []
+        line = ''
+
+        words.each do |word|
+          test_line = line.empty? ? word : "#{line} #{word}"
+          width = draw.get_type_metrics(background, test_line).width
+          if width <= max_width
+            line = test_line
+          else
+            lines << line unless line.empty?
+            line = word
+          end
+        end
+
+        lines << line unless line.empty?
+        lines.join("\n")
       end
+    end
+
+    def contains_cjk?(text)
+      # Checks for any CJK character (Japanese, Chinese, Korean)
+      !!(text =~ /[\p{Han}\p{Katakana}\p{Hiragana}\p{Hangul}]/)
     end
 
     def text_options(text)
